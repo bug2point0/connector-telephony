@@ -157,7 +157,10 @@ class PhoneCommon(models.AbstractModel):
         _logger.debug("Number before reformat = %s" % erp_number)
         # erp_number are supposed to be in International format, so no need to
         # give a country code here
-        parsed_num = phonenumbers.parse(erp_number, None)
+        try:
+            parsed_num = phonenumbers.parse(erp_number, None)
+        except NameError:
+            return erp_number
         country_code = self.env.company.country_id.code
         assert country_code, "Missing country on company"
         _logger.debug("Country code = %s" % country_code)
