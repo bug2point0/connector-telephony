@@ -13,6 +13,16 @@ try:
 except ImportError:
     _logger.debug("Cannot `import phonenumbers`.")
 
+_PHONEMODEL_ADDITIONAL_WHERE_CLAUSE = {
+    'res.partner': """
+        or id in (
+            select partner
+            from partner_multi_phone_phone
+            where val ilike %(pg_search_number)s
+        )
+    """
+}
+
 
 class PhoneCommon(models.AbstractModel):
     _name = "phone.common"
@@ -58,56 +68,48 @@ class PhoneCommon(models.AbstractModel):
             end_number_to_match = presented_number
 
         sorted_phonemodels = self._get_phone_models()
+        rtr = []
         for obj_dict in sorted_phonemodels:
             obj = obj_dict["object"]
+            obj_name = obj._name
             pg_search_number = "%" + end_number_to_match
             _logger.debug(
                 "Will search phone and mobile numbers in %s ending with '%s'",
-                obj._name,
+                obj_name,
                 end_number_to_match,
             )
-            sql = "SELECT id FROM %s WHERE " % obj._table
             sql_where = []
-            sql_args = []
             for field in obj_dict["fields"]:
-                sql_where.append("replace(%s, ' ', '') ilike %%s" % field)
-                sql_args.append(pg_search_number)
-            sql += " or ".join(sql_where)
+                sql_where.append(f"replace({field}, ' ', '') ilike %(pg_search_number)s")
+            sql = (
+                "select id, {rec_name}"
+                " from {tbl_name} where ({where_clause})"
+            ).format(
+                rec_name=obj._rec_name,
+                # string_of_phone_fields=', '.join(obj_dict["fields"]) + ' ',
+                tbl_name=obj._table,
+                where_clause=" or ".join(sql_where)
+            ) + _PHONEMODEL_ADDITIONAL_WHERE_CLAUSE.get(obj_name, '')
+            sql_args = {'pg_search_number': f'%{pg_search_number}'}
             _logger.debug(
                 "get_record_from_phone_number sql=%s sql_args=%s", sql, sql_args
             )
-            self._cr.execute(sql, tuple(sql_args))
-            res_sql = self._cr.fetchall()
-            if len(res_sql) > 1:
-                res_ids = [x[0] for x in res_sql]
-                _logger.warning(
-                    "There are several %s (IDS = %s) with a phone number "
-                    "ending with '%s'. Taking the first one.",
-                    obj._name,
-                    res_ids,
-                    end_number_to_match,
-                )
+            self._cr.execute(sql, sql_args)
+            res_sql = self._cr.dictfetchall()
             if res_sql:
-                obj_id = res_sql[0][0]
-                res_obj = obj.browse(obj_id)
-                # Use name_get()[0][1] instead of display_name
-                # to take the context into account with the callerid key
-                name = res_obj.name_get()[0][1]
-                res = (obj._name, res_obj.id, name)
-                _logger.debug(
-                    "Answer get_record_from_phone_number: (%s, %d, %s)",
-                    res[0],
-                    res[1],
-                    res[2],
-                )
-                return res
+                rtr += [(
+                    obj_name,
+                    rec['id'],
+                    rec['name'],
+                ) for rec in res_sql]
             else:
                 _logger.debug(
                     "No match on %s for end of phone number '%s'",
-                    obj._name,
+                    obj_name,
                     end_number_to_match,
                 )
-        return False
+
+        return rtr, presented_number
 
     @api.model
     def _get_phone_models(self):

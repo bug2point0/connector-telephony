@@ -9,8 +9,19 @@ import {Component} from "@odoo/owl";
 import {_t} from "@web/core/l10n/translation";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
-
+import { Dialog } from "@web/core/dialog/dialog";
 const systrayRegistry = registry.category("systray");
+
+export class CallersDialog extends Component {}
+CallersDialog.template = "asterisk_click2dial.Click2DialCallers";
+CallersDialog.components = { Dialog };
+CallersDialog.props = {
+    close: Function,
+    title: { type: String, optional: true},
+    talking_number: { type: String, optional: true},
+    recs: { type: Object, optional: true },
+
+};
 
 export class Click2DialSystray extends Component {
     setup() {
@@ -18,6 +29,7 @@ export class Click2DialSystray extends Component {
         this.action = useService("action");
         this.notification = useService("notification");
         this.user = useService("user");
+        this.dialog = useService("dialog");
     }
 
     async onOpenCaller() {
@@ -39,41 +51,18 @@ export class Click2DialSystray extends Component {
             this.notification.add(_t("The calling number is not a phone number!"), {
                 title: r,
             });
-        } else if (typeof r === "string") {
-            var action = {
-                name: _t("Number Not Found"),
-                type: "ir.actions.act_window",
-                res_model: "number.not.found",
-                view_mode: "form",
-                views: [[false, "form"]],
-                target: "new",
-                context: {default_calling_number: r},
-            };
-            this.action.doAction(action);
-        } else if (typeof r === "object" && r.length === 3) {
-            this.notification.add(
-                _t("Moving to form view of %s (%s ID %s)", r[2], r[0], r[1]),
-                {
-                    title: _t("On the phone with '%s'", r[2]),
-                }
-            );
-            var action_suc = {
-                type: "ir.actions.act_window",
-                res_model: r[0],
-                res_id: r[1],
-                view_mode: "form,tree",
-                views: [[false, "form"]],
-                /* If you want to make it work with the 'web' module
-        of Odoo Enterprise edition, you have to change the line
-        target: 'current',
-            to:
-        target: 'new',
-        If you want to use target: 'current', with web/enterprise,
-        you have to reload the Web page just after */
-                target: "current",
-                context: {},
-            };
-            this.action.doAction(action_suc);
+        }  else if (((typeof r === "string")) || (typeof r === "object" && !(r.length === 0))) {
+            let rarr = r[0];
+            for (let index = 0; index < rarr.length; ++index) {
+                rarr[index][3] = '/web#id=' + rarr[index][1] + '&model=' + rarr[index][0] + '&view_type=form&cids=1'
+
+                // ...use `element`...
+            }
+            this.dialog.add(CallersDialog, {
+                recs: rarr,
+                title: 'Με ποιόν συνομιλείς',
+                talking_number: r[1],
+            });
         }
     }
 }
