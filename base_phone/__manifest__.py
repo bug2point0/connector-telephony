@@ -13,7 +13,7 @@
     "maintainers": ["alexis-via"],
     "website": "https://github.com/OCA/connector-telephony",
     "depends": ["phone_validation", "base_setup"],
-    "external_dependencies": {"python": ["phonenumbers"]},
+    # "external_dependencies": {"python": ["phonenumbers"]},
     "data": [
         "security/phone_security.xml",
         "security/ir.model.access.csv",
