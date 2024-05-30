@@ -111,32 +111,10 @@ class PhoneCommon(models.AbstractModel):
 
     @api.model
     def _get_phone_models(self):
-        phoneobj = []
-        for model_name in self.env.registry.keys():
-            senv = False
-            try:
-                senv = self.with_context(callerid=True).env[model_name]
-            except Exception:
-                continue
-            if (
-                hasattr(senv, "_phone_name_sequence")
-                and isinstance(senv._phone_name_sequence, int)
-                and hasattr(senv, "_phone_name_fields")
-                and isinstance(senv._phone_name_fields, list)
-            ):
-                cdict = {
-                    "object": senv,
-                    "fields": senv._phone_name_fields,
-                }
-                phoneobj.append((senv._phone_name_sequence, cdict))
-
-        phoneobj_sorted = sorted(phoneobj, key=lambda element: element[0])
-        res = []
-        for lambd in phoneobj_sorted:
-            res.append(lambd[1])
-        # [{'fields': ['phone', 'mobile'], 'object': res.partner()},
-        #  {'fields': ['phone', 'mobile'], 'object': crm.lead()}]
-        return res
+        return [  # i don't see the reason to run all this code and add all this complexity for something so static
+            {'fields': ['phone', 'mobile'], 'object': self.with_context(callerid=True).env['res.partner']},
+            {'fields': ['phone', 'mobile'], 'object': self.with_context(callerid=True).env['crm.lead']},
+        ]
 
     @api.model
     def click2dial(self, erp_number):
