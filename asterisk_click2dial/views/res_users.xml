@@ -44,6 +44,12 @@
         <group name="phone" position="attributes">
             <attribute name="invisible">0</attribute>
         </group>
+        <group name="phone" position="before">
+            <separator/>
+        </group>
+        <group name="phone" position="inside">
+            <field name="resource" string="Τηλέφωνο"/>
+        </group>
     </field>
 </record>
 

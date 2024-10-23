@@ -24,7 +24,7 @@
         <field name="model">res.users</field>
         <field name="inherit_id" ref="base.view_users_form_simple_modif" />
         <field name="arch" type="xml">
-            <group name="signature" position="before">
+            <group name="signature" position="after">
                 <group name="phone" invisible="1">
                     <!-- Empty group, that is used by other phone modules
                          We set it as invisible even if it is empty.
